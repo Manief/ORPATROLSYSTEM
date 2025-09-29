@@ -1,15 +1,34 @@
 {
-  "name": "qr-patrol-server",
+  "name": "qr-patrol-system",
   "version": "1.0.0",
-  "description": "Backend server for the QR Patrol System",
-  "main": "server.js",
+  "description": "QR Patrol System - Full-stack React/Express application for security patrol management",
+  "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "dev": "vite --host 0.0.0.0 --port 5000",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server.js",
+    "start": "node server.js",
+    "start:backend": "node server.js",
+    "start:full": "npm run server & npm run dev"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
+    "@octokit/rest": "^22.0.0",
+    "@types/react-router-dom": "^5.3.3",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
-    "pg": "^8.7.1"
+    "pg": "^8.7.1",
+    "qrcode.react": "^4.2.0",
+    "react-router-dom": "^7.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
   }
 }

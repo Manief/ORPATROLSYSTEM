@@ -1,11 +1,24 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const { Pool } = require('pg');
-const bodyParser = require('body-parser');
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { Pool } from 'pg';
+import bodyParser from 'body-parser';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3001;
+
+// Replit environment configuration
+const isReplit = process.env.REPLIT_DEV_DOMAIN;
+const replitDomain = process.env.REPLIT_DEV_DOMAIN || 'localhost';
+
+// Trust proxy for Replit environment
+if (isReplit) {
+  app.set('trust proxy', true);
+}
 
 // Database connection
 const pool = new Pool({
@@ -76,8 +89,29 @@ const handleDbError = (err, res) => {
     res.status(500).send(err.message);
 };
 
-// Middleware
-app.use(cors());
+// Middleware - Enhanced CORS for Replit environment
+const corsOptions = {
+  origin: isReplit ? (origin, callback) => {
+    // Allow all Replit proxy domains and localhost for development
+    const allowedOrigins = [
+      `https://${replitDomain}`,
+      'http://localhost:5000',
+      'http://127.0.0.1:5000'
+    ];
+    
+    // Allow any Replit proxy domain (*.replit.dev with port patterns)
+    const isReplitProxy = origin && origin.includes('.replit.dev');
+    
+    if (!origin || allowedOrigins.includes(origin) || isReplitProxy) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  } : true,
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 // FIX: Using the robust, industry-standard `body-parser` library is the
 // definitive solution to the data persistence problem. This ensures all
 // incoming JSON request bodies are correctly parsed, fixing the root
@@ -304,15 +338,21 @@ app.get('/api/dashboard-stats', async (req, res) => {
 });
 
 
-// Serve static assets
-app.use(express.static(path.join(__dirname)));
+// Serve static assets from dist directory in production, current directory in development
+const staticPath = process.env.NODE_ENV === 'production' ? path.join(__dirname, 'dist') : __dirname;
+app.use(express.static(staticPath));
 
 // Fallback to index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const indexPath = process.env.NODE_ENV === 'production' ? path.join(__dirname, 'dist', 'index.html') : path.join(__dirname, 'index.html');
+  res.sendFile(indexPath);
 });
 
-app.listen(port, async () => {
+app.listen(port, '0.0.0.0', async () => {
     await initializeDatabase();
     console.log(`Server running on port ${port}`);
+    if (isReplit) {
+        console.log(`Replit environment detected`);
+        console.log(`Public URL: https://${replitDomain}`);
+    }
 });

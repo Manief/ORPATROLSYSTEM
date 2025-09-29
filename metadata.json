@@ -1,0 +1,7 @@
+{
+  "name": "QR Patrol System",
+  "description": "A complete QR Patrol System for security companies to manage sites, patrol points, and monitor guard patrols in real-time. Features include QR code generation, live patrol tracking, signature capture, and comprehensive reporting.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

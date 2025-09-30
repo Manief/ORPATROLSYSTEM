@@ -328,22 +328,27 @@ app.get('/api/dashboard-stats', async (req, res) => {
 });
 
 
-// Serve static assets from dist directory in production, current directory in development
-const staticPath = process.env.NODE_ENV === 'production' ? path.join(__dirname, 'dist') : __dirname;
-console.log(`📁 Serving static files from: ${staticPath}`);
-app.use(express.static(staticPath));
+// Only serve static files in production (Vite handles this in development)
+if (process.env.NODE_ENV === 'production') {
+  const staticPath = path.join(__dirname, 'dist');
+  console.log(`📁 Serving static files from: ${staticPath}`);
+  app.use(express.static(staticPath));
 
-// Fallback to index.html for client-side routing
-app.get('*', (req, res) => {
-  const indexPath = process.env.NODE_ENV === 'production' ? path.join(__dirname, 'dist', 'index.html') : path.join(__dirname, 'index.html');
-  console.log(`📄 Serving index.html from: ${indexPath}`);
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error('Error serving index.html:', err);
-      res.status(500).send('Error loading application');
-    }
+  // Fallback to index.html for client-side routing
+  app.get('*', (req, res) => {
+    const indexPath = path.join(__dirname, 'dist', 'index.html');
+    console.log(`📄 Serving index.html from: ${indexPath}`);
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error('Error serving index.html:', err);
+        res.status(500).send('Error loading application');
+      }
+    });
   });
-});
+} else {
+  console.log('🔧 Development mode: Static files served by Vite on port 5000');
+  console.log('📡 Backend API only on port 3001');
+}
 
 app.listen(port, '0.0.0.0', async () => {
     console.log(`🚀 Server running on port ${port}`);

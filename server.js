@@ -11,14 +11,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Replit environment configuration
-const isReplit = process.env.REPLIT_DEV_DOMAIN;
-const replitDomain = process.env.REPLIT_DEV_DOMAIN || 'localhost';
+// Replit environment configuration - check for both dev and production
+const isReplit = !!(process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DEPLOYMENT);
+const replitDomain = process.env.REPLIT_DEV_DOMAIN || 'production';
 
-// Trust proxy for Replit environment
-if (isReplit) {
-  app.set('trust proxy', true);
-}
+// Always trust proxy in Replit environment (both dev and production)
+app.set('trust proxy', true);
 
 // Database connection
 const pool = new Pool({
@@ -27,8 +25,13 @@ const pool = new Pool({
 });
 
 const initializeDatabase = async () => {
-    const client = await pool.connect();
+    if (!process.env.DATABASE_URL) {
+        console.log('⚠️  DATABASE_URL not set - database operations will not work');
+        return;
+    }
+    
     try {
+        const client = await pool.connect();
         await client.query(`
             CREATE TABLE IF NOT EXISTS companies (
                 id VARCHAR(50) PRIMARY KEY,
@@ -74,10 +77,9 @@ const initializeDatabase = async () => {
             );
         `);
         console.log('Database schema checked/initialized successfully.');
+        client.release();
     } catch (err) {
         console.error('Error initializing database schema', err.stack);
-    } finally {
-        client.release();
     }
 };
 
@@ -91,23 +93,11 @@ const handleDbError = (err, res) => {
 
 // Middleware - Enhanced CORS for Replit environment
 const corsOptions = {
-  origin: isReplit ? (origin, callback) => {
-    // Allow all Replit proxy domains and localhost for development
-    const allowedOrigins = [
-      `https://${replitDomain}`,
-      'http://localhost:5000',
-      'http://127.0.0.1:5000'
-    ];
-    
-    // Allow any Replit proxy domain (*.replit.dev with port patterns)
-    const isReplitProxy = origin && origin.includes('.replit.dev');
-    
-    if (!origin || allowedOrigins.includes(origin) || isReplitProxy) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  } : true,
+  origin: (origin, callback) => {
+    // In production or Replit, allow all origins for now
+    // You can restrict this later based on your needs
+    callback(null, true);
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -349,10 +339,15 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, '0.0.0.0', async () => {
-    await initializeDatabase();
-    console.log(`Server running on port ${port}`);
-    if (isReplit) {
-        console.log(`Replit environment detected`);
-        console.log(`Public URL: https://${replitDomain}`);
+    console.log(`🚀 Server running on port ${port}`);
+    console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    if (process.env.REPLIT_DEPLOYMENT) {
+        console.log('🌍 Running in Replit Production Deployment');
+    } else if (process.env.REPLIT_DEV_DOMAIN) {
+        console.log(`🔧 Running in Replit Development`);
+        console.log(`🔗 Dev URL: https://${replitDomain}`);
     }
+    
+    await initializeDatabase();
 });
